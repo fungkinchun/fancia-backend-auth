@@ -119,7 +119,7 @@ class SecurityConfiguration(
     @Bean
     fun authenticationManager(): AuthenticationManager {
         val daoAuthenticationProvider = DaoAuthenticationProvider(userDetailsService)
-        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder())
+        daoAuthenticationProvider.passwordEncoder = passwordEncoder()
         return ProviderManager(daoAuthenticationProvider)
     }
 

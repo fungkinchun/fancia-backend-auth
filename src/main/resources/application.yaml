@@ -1,11 +1,7 @@
 server:
-  port: 9000
-logging:
-  level:
-    org.springframework.security: trace
+  servlet:
+    context-path: /${REPO_NAME}
 spring:
-  config:
-    import: optional:file:.env[.properties]
   security:
     oauth2:
       authorizationserver:
@@ -22,9 +18,9 @@ spring:
                 - "refresh_token"
                 - "client_credentials"
               redirect-uris:
-                - "http://127.0.0.1:8080/login/oauth2/code/oidc-client"
+                - "http://${DOMAIN_NAME}/login/oauth2/code/oidc-client"
               post-logout-redirect-uris:
-                - "http://127.0.0.1:8080/"
+                - "http://${DOMAIN_NAME}/"
               scopes:
                 - "openid"
                 - "profile"
@@ -40,9 +36,9 @@ spring:
               device-code-time-to-live: 7d
   datasource:
     url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
+    username: ${AWS_RDS_SECRET_NAME:${DATABASE_USERNAME}}
     password: ${DATABASE_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: ${DATABASE_DRIVER:com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver}
   jpa:
     properties:
       hibernate:

@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm") version "2.2.21"
     kotlin("plugin.spring") version "2.2.21"
-    kotlin("plugin.jpa") version "2.2.0"
+    kotlin("plugin.jpa") version "2.3.20"
     id("org.springframework.boot") version "4.0.3"
     id("io.spring.dependency-management") version "1.1.7"
 }
@@ -56,6 +56,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.postgresql:postgresql")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("io.awspring.cloud:spring-cloud-aws-starter-secrets-manager:4.0.0")
+    implementation("com.amazonaws.secretsmanager:aws-secretsmanager-jdbc:2.0.4")
     implementation("com.fancia.backend.shared:common:0.0.1-SNAPSHOT")
     implementation("com.fancia.backend.shared:user:0.0.1-SNAPSHOT")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
