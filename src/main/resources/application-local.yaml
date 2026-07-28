@@ -1,0 +1,108 @@
+server:
+  servlet:
+    context-path: /${REPO_NAME}
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+  security:
+    oauth2:
+      authorizationserver:
+        client:
+          oidc-client:
+            registration:
+              client-id: "oidc-client"
+              client-authentication-methods:
+                - "none"
+                - "client_secret_basic"
+                - "client_secret_post"
+              authorization-grant-types:
+                - "authorization_code"
+                - "refresh_token"
+                - "client_credentials"
+              redirect-uris:
+                - "http://localhost:3000/login/oauth2/code/oidc-client"
+                - "http://${DOMAIN_NAME:localhost}/login/oauth2/code/oidc-client"
+              post-logout-redirect-uris:
+                - "http://localhost:3000/"
+                - "http://${DOMAIN_NAME:localhost}/"
+              scopes:
+                - "openid"
+                - "profile"
+                - "email"
+                - "client.create"
+                - "client.read"
+            require-authorization-consent: true
+            token:
+              access-token-time-to-live: 7d
+              refresh-token-time-to-live: 30d
+              reuse-refresh-tokens: false
+              authorization-code-time-to-live: 7d
+              device-code-time-to-live: 7d
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-name: Google
+            provider: google
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/auth/callback}
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com
+            user-name-attribute: sub
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${AWS_RDS_SECRET_NAME:${DATABASE_USERNAME}}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: ${DATABASE_DRIVER:com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver}
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+      jakarta:
+        persistence:
+          schema-generation:
+            scripts:
+              action: create
+              create-target: src/main/resources/db/migration/V2__create_schema.sql
+              create-source: metadata
+    hibernate:
+      ddl-auto: create
+  cloud:
+    aws:
+      secretsmanager:
+        endpoint: http://localhost:4566
+        region: ${AWS_REGION}
+      credentials:
+        access-key: test
+        secret-key: test
+  flyway:
+    locations: classpath:db/migration
+    placeholders:
+      gis_admin_password: ${GIS_ADMIN_PASSWORD}
+springdoc:
+  show-oauth2-endpoints: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.fancia.backend.auth: DEBUG
+    org.springframework.security.web: DEBUG
+    org.springframework.security.oauth2.server.authorization: TRACE
+    org.springframework.security.oauth2.client: DEBUG
+    org.springframework.security.oauth2.server.resource: DEBUG

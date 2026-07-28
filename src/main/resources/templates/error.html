@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta http-equiv="refresh" th:content="|${redirectDelaySeconds};url=${redirectUrl}|"/>
+    <title>Something went wrong — Fancia</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="anonymous" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link crossorigin="anonymous" href="https://cdn.fancia.co.uk" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdn.fancia.co.uk/static/css/styles.css" rel="stylesheet"/>
+    <style>
+        .error-page {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 1.5rem;
+          padding: 2rem;
+          text-align: center;
+          background: var(--brand-surface);
+        }
+
+        .error-heading {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: var(--brand-ink);
+        }
+
+        .error-page .btn-primary {
+          width: auto;
+          min-width: 12rem;
+          margin-top: 0;
+          text-decoration: none;
+        }
+
+        .error-redirect {
+          margin: 0;
+          font-size: 0.875rem;
+          color: var(--brand-muted);
+        }
+    </style>
+</head>
+<body>
+<main class="error-page">
+    <a aria-label="Fancia home" class="brand-link" th:href="${redirectUrl}">
+        <img alt="Fancia" class="brand-logo" src="https://cdn.fancia.co.uk/static/img/logo-wordmark.svg?v=3"/>
+    </a>
+
+    <h1 class="error-heading">Something went wrong</h1>
+
+    <a class="btn-primary" th:href="${redirectUrl}">Return to Fancia</a>
+
+    <p class="error-redirect">
+        Redirecting in <span id="countdown" th:text="${redirectDelaySeconds}">8</span> seconds&hellip;
+    </p>
+</main>
+<script th:inline="javascript">
+    (function () {
+      var seconds = /*[[${redirectDelaySeconds}]]*/ 8;
+      var countdown = document.getElementById("countdown");
+      if (!countdown) return;
+
+      var timer = window.setInterval(function () {
+        seconds -= 1;
+        if (seconds <= 0) {
+          window.clearInterval(timer);
+          return;
+        }
+        countdown.textContent = String(seconds);
+      }, 1000);
+    })();
+</script>
+</body>
+</html>

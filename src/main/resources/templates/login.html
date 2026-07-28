@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Sign in — Fancia</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="anonymous" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link crossorigin="anonymous" href="https://cdn.fancia.co.uk" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://cdn.fancia.co.uk/static/css/styles.css" rel="stylesheet"/>
+    <style th:inline="text">
+        .oauth2-section{display:flex;flex-direction:column}
+        .divider{display:flex;align-items:center;gap:1rem;margin:1.5rem 0;color:#717171;font-size:.875rem}
+        .divider::before,.divider::after{content:"";flex:1;height:1px;background:#ebebeb}
+        .btn-google{display:flex;align-items:center;justify-content:center;gap:.75rem;box-sizing:border-box;width:100%;height:2.75rem;padding:0 1.5rem;font:inherit;font-size:1rem;font-weight:600;color:#222;text-decoration:none;background:#fff;border:1px solid #ebebeb;border-radius:9999px;cursor:pointer}
+        .btn-google:hover{border-color:#dadce0;box-shadow:0 1px 2px rgba(60,64,67,.15)}
+        .btn-google-icon{width:1.25rem;height:1.25rem;flex-shrink:0}
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="layout">
+        <aside class="marketing">
+            <p class="marketing-eyebrow">Welcome back</p>
+            <h1 class="marketing-title">Discover events. Meet people in real life.</h1>
+            <p class="marketing-copy">
+                Sign in to browse featured events, book tickets, and host your own.
+            </p>
+        </aside>
+
+        <main class="form-column">
+            <div class="form-wrap">
+                <a aria-label="Fancia home" class="brand-link" th:href="${domainName}">
+                    <img alt="Fancia" class="brand-logo"
+                         src="https://cdn.fancia.co.uk/static/img/logo-wordmark.svg?v=3"/>
+                </a>
+
+                <h1 class="form-heading">Sign in</h1>
+                <p class="form-subtext">Use your Fancia account to continue securely.</p>
+
+                <form class="login-form" method="post" th:action="@{/login}">
+                    <input th:name="${_csrf.parameterName}" th:value="${_csrf.token}" type="hidden"/>
+
+                    <div class="error-banner" role="alert" th:if="${param.error}">
+                        Email or password is incorrect. Please try again.
+                    </div>
+
+                    <div class="field">
+                        <label for="username">Email</label>
+                        <input
+                                autocomplete="username"
+                                autofocus
+                                class="input"
+                                id="username"
+                                name="username"
+                                placeholder="you@example.com"
+                                required
+                                type="email"
+                        />
+                    </div>
+
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input
+                                autocomplete="current-password"
+                                class="input"
+                                id="password"
+                                name="password"
+                                required
+                                type="password"
+                        />
+                    </div>
+
+                    <p class="forgot-password-link">
+                        <a th:href="${domainName + '/forgot-password'}">Forgot password?</a>
+                    </p>
+
+                    <button class="btn-primary" type="submit">Sign in</button>
+                </form>
+
+                <div class="oauth2-section">
+                    <div aria-hidden="true" class="divider">
+                        <span>or</span>
+                    </div>
+
+                    <div class="error-banner" role="alert" th:if="${param.oauth2Error}">
+                        Google sign-in failed. Please try again or use email and password.
+                    </div>
+
+                    <a class="btn-google" th:href="@{/oauth2/authorization/google}">
+                        <svg aria-hidden="true" class="btn-google-icon" focusable="false" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                  fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                  fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                  fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                  fill="#EA4335"/>
+                        </svg>
+                        Sign in with Google
+                    </a>
+                </div>
+
+                <p class="footer-text">
+                    Don&rsquo;t have an account?
+                    <a th:href="${signupUrl}">Sign up</a>
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <footer class="site-footer" role="contentinfo">
+        <nav aria-label="Legal" class="site-footer-legal">
+            <a th:href="${domainName + '/privacy'}">Privacy</a>
+            <a th:href="${domainName + '/terms'}">Terms</a>
+            <a th:href="${domainName + '/cookies'}">Cookies</a>
+            <a th:href="${domainName + '/help'}">Help</a>
+        </nav>
+        <p class="site-footer-copy">
+            &copy; <span th:text="${currentYear}">2026</span> Fancify Limited
+        </p>
+    </footer>
+</div>
+</body>
+</html>
