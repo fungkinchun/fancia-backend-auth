@@ -41,6 +41,7 @@ spring:
               redirect-uris:
                 - "https://${DOMAIN_NAME}/login/oauth2/code/oidc-client"
                 - "https://www.${DOMAIN_NAME}/login/oauth2/code/oidc-client"
+                - "fancia://oauth/callback"
               post-logout-redirect-uris:
                 - "https://${DOMAIN_NAME}/"
                 - "https://www.${DOMAIN_NAME}/"
