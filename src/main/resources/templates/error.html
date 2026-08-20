@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="light dark" name="color-scheme"/>
     <meta http-equiv="refresh" th:content="|${redirectDelaySeconds};url=${redirectUrl}|"/>
     <title>Something went wrong — Fancia</title>
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="anonymous" href="https://fonts.gstatic.com" rel="preconnect"/>
     <link crossorigin="anonymous" href="https://cdn.fancia.co.uk" rel="preconnect"/>
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://cdn.fancia.co.uk/static/css/styles.css" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/styles.css}"/>
     <style>
         .error-page {
           min-height: 100vh;

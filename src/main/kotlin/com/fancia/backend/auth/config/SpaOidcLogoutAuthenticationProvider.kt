@@ -23,9 +23,6 @@ import org.springframework.util.CollectionUtils
 import org.springframework.util.StringUtils
 import java.time.Instant
 
-/**
- * RP-initiated logout for cross-origin PKCE SPAs (no client_secret).
- */
 class SpaOidcLogoutAuthenticationProvider(
     private val registeredClientRepository: RegisteredClientRepository,
     private val authorizationService: OAuth2AuthorizationService,

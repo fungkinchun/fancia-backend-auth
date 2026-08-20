@@ -41,10 +41,11 @@ spring:
               redirect-uris:
                 - "https://${DOMAIN_NAME}/login/oauth2/code/oidc-client"
                 - "https://www.${DOMAIN_NAME}/login/oauth2/code/oidc-client"
-                - "fancia://oauth/callback"
+                - "${PROJECT_NAME}://oauth/callback"
               post-logout-redirect-uris:
                 - "https://${DOMAIN_NAME}/"
                 - "https://www.${DOMAIN_NAME}/"
+                - "${PROJECT_NAME}://oauth/logout"
               scopes:
                 - "openid"
                 - "profile"

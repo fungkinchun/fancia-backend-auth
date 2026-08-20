@@ -142,7 +142,6 @@ class JwtSigningKeySource(
         private const val PKCS8_PRIVATE_KEY_HEADER = "BEGIN PRIVATE KEY"
         private const val PUBLIC_KEY_HEADER = "BEGIN PUBLIC KEY"
 
-        /** Secrets Manager / JSON often stores PEM with literal \\n instead of real newlines. */
         internal fun normalizePem(value: String): String =
             value.trim()
                 .removeSurrounding("\"")

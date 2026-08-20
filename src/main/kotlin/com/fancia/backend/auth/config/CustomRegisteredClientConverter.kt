@@ -17,17 +17,6 @@ import java.time.Instant
 import java.util.*
 import java.util.function.Consumer
 
-/**
- * A {@link Converter} that transforms an {@link OidcClientRegistration} into a {@link RegisteredClient}
- * for use with Spring Authorization Server.
- *
- * <p>
- * <b>Key difference from {@link OidcClientRegistrationRegisteredClientConverter}:</b>
- * This converter determines client authentication methods from the registration's <b>client_authentication_methods</b>
- * claim, rather than the standard <b>token_endpoint_auth_method</b> field. This enables more flexible and
- * customizable client authentication configurations during dynamic client registration.
- * </p>
- */
 class CustomRegisteredClientConverter : Converter<OidcClientRegistration, RegisteredClient> {
     companion object {
         val CLIENT_ID_GENERATOR: StringKeyGenerator = Base64StringKeyGenerator(

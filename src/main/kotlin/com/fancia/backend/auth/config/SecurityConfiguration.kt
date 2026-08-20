@@ -168,7 +168,6 @@ class SecurityConfiguration(
             isOAuth2ClientLoginPath(path)
         }
 
-        /** Spring OAuth2 Client login — not the authorization server's /oauth2/authorize. */
         private fun isOAuth2ClientLoginPath(path: String): Boolean =
             path.startsWith("/oauth2/authorization/")
 
