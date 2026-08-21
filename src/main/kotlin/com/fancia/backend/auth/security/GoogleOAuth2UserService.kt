@@ -5,6 +5,7 @@ import com.fancia.backend.auth.core.user.repository.UserRepository
 import com.fancia.backend.shared.user.core.entity.User
 import com.fancia.backend.shared.user.core.entity.UserConnectedAccount
 import com.fancia.backend.shared.user.core.enums.AccountStatus
+import com.fancia.backend.shared.user.core.enums.ConnectedAccountProvider
 import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
@@ -37,7 +38,8 @@ class GoogleOAuth2UserService(
     }
 
     private fun findOrCreateUser(googleSub: String, email: String, oauth2User: OAuth2User): User {
-        connectedAccountRepository.findByProviderAndProviderIdWithUser("google", googleSub)
+        connectedAccountRepository
+            .findByProviderAndProviderIdWithUser(ConnectedAccountProvider.GOOGLE.value, googleSub)
             ?.user
             ?.let { return it }
 
@@ -57,12 +59,12 @@ class GoogleOAuth2UserService(
 
     private fun linkGoogleAccount(user: User, googleSub: String) {
         val alreadyLinked = connectedAccountRepository
-            .findByProviderAndProviderIdWithUser("google", googleSub) != null
+            .findByProviderAndProviderIdWithUser(ConnectedAccountProvider.GOOGLE.value, googleSub) != null
         if (alreadyLinked) {
             return
         }
         connectedAccountRepository.save(
-            UserConnectedAccount("google", googleSub, user)
+            UserConnectedAccount(ConnectedAccountProvider.GOOGLE.value, googleSub, user)
         )
     }
 
