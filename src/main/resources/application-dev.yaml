@@ -2,6 +2,11 @@ server:
   forward-headers-strategy: framework
   servlet:
     context-path: /${REPO_NAME}
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
   error:
     whitelabel:
       enabled: false
@@ -9,6 +14,7 @@ spring:
   config:
     import:
       - aws-secretsmanager:${ENV}/${PROJECT_NAME}/oauth2
+      - aws-secretsmanager:${ENV}/${PROJECT_NAME}/redis
   web:
     resources:
       chain:
@@ -86,6 +92,18 @@ spring:
       minimum-idle: ${MIN_IDLE:0}
       max-lifetime: 600000
       keepalive-time: 120000
+  data:
+    redis:
+      url: ${REDIS_URL}
+      timeout: 3s
+      connect-timeout: 5s
+      lettuce:
+        pool:
+          enabled: false
+  session:
+    timeout: 30m
+    redis:
+      namespace: fancia:auth:session
   jpa:
     properties:
       hibernate:

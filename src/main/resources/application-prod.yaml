@@ -1,6 +1,11 @@
 server:
   servlet:
     context-path: /${REPO_NAME}
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
 spring:
   config:
     import:
@@ -42,6 +47,22 @@ spring:
     username: ${AWS_RDS_SECRET_NAME:${DATABASE_USERNAME}}
     password: ${DATABASE_PASSWORD}
     driver-class-name: ${DATABASE_DRIVER:com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver}
+    hikari:
+      allow-pool-suspension: true
+      maximum-pool-size: ${MAX_POOL_SIZE:2}
+      minimum-idle: ${MIN_IDLE:0}
+  data:
+    redis:
+      url: ${REDIS_URL}
+      timeout: 3s
+      connect-timeout: 5s
+      lettuce:
+        pool:
+          enabled: false
+  session:
+    timeout: 30m
+    redis:
+      namespace: fancia:auth:session
   jpa:
     properties:
       hibernate:
@@ -65,4 +86,3 @@ management:
   endpoint:
     prometheus:
       enabled: true
-
