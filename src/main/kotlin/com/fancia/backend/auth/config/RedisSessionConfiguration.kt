@@ -55,7 +55,6 @@ class RedisSessionConfiguration(
                 .allowIfSubType("java.util.")
                 .allowIfSubType("java.time.")
                 .allowIfSubType("java.lang.")
-                .build()
 
         val securityModules: List<JacksonModule> =
             SecurityJacksonModules.getModules(classLoader, typeValidator)
