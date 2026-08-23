@@ -2,7 +2,6 @@ package com.fancia.backend.auth.config
 
 import io.lettuce.core.ClientOptions
 import io.lettuce.core.SocketOptions
-import io.lettuce.core.SslOptions
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -51,22 +50,27 @@ class RedisConnectionConfiguration(
             }
         }
 
-        val clientConfigBuilder = LettuceClientConfiguration.builder()
-            .commandTimeout(commandTimeout)
-            .clientOptions(
-                ClientOptions.builder()
-                    .socketOptions(
-                        SocketOptions.builder()
-                            .connectTimeout(connectTimeout)
-                            .keepAlive(true)
-                            .build(),
-                    )
-                    .build(),
-            )
+        val clientOptions =
+            ClientOptions.builder()
+                .socketOptions(
+                    SocketOptions.builder()
+                        .connectTimeout(connectTimeout)
+                        .keepAlive(true)
+                        .build(),
+                )
+                .build()
 
-        if (useSsl) {
-            clientConfigBuilder.useSsl().sslOptions(SslOptions.builder().build())
-        }
+        val clientConfigBuilder =
+            LettuceClientConfiguration.builder()
+                .commandTimeout(commandTimeout)
+                .clientOptions(clientOptions)
+
+        val clientConfig =
+            if (useSsl) {
+                clientConfigBuilder.useSsl().build()
+            } else {
+                clientConfigBuilder.build()
+            }
 
         log.info(
             "Configuring Redis session store host={} port={} ssl={}",
@@ -81,7 +85,7 @@ class RedisConnectionConfiguration(
             )
         }
 
-        return LettuceConnectionFactory(standalone, clientConfigBuilder.build()).apply {
+        return LettuceConnectionFactory(standalone, clientConfig).apply {
             afterPropertiesSet()
         }
     }
@@ -97,4 +101,3 @@ class RedisConnectionConfiguration(
         return trimmed
     }
 }
-
