@@ -10,6 +10,7 @@ spring:
   config:
     import:
       - aws-secretsmanager:${ENV}/${PROJECT_NAME}/oauth2
+      - aws-secretsmanager:${ENV}/${PROJECT_NAME}/redis
   security:
     oauth2:
       authorizationserver:
@@ -53,9 +54,12 @@ spring:
       minimum-idle: ${MIN_IDLE:0}
   data:
     redis:
+      # Must be rediss:// for Upstash (TLS required)
       url: ${REDIS_URL}
       timeout: 3s
       connect-timeout: 5s
+      ssl:
+        enabled: true
       lettuce:
         pool:
           enabled: false
