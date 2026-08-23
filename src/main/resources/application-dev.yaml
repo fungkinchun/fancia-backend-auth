@@ -131,6 +131,17 @@ management:
       enabled: true
 
 
+# Temporary: diagnose OAuth/JWT/session issues (remove after fix)
 logging:
   level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: TRACE
+    org.springframework.security.oauth2.server.authorization: TRACE
     org.springframework.security.oauth2.server.authorization.oidc: TRACE
+    org.springframework.security.oauth2.jwt: TRACE
+    org.springframework.session: DEBUG
+    org.springframework.data.redis: DEBUG
+    io.lettuce.core: INFO
+    com.nimbusds.jose: DEBUG
+    com.nimbusds.jwt: DEBUG
+    com.fancia.backend.auth: DEBUG
