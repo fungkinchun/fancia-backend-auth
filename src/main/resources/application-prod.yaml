@@ -52,10 +52,13 @@ spring:
       allow-pool-suspension: true
       maximum-pool-size: ${MAX_POOL_SIZE:2}
       minimum-idle: ${MIN_IDLE:0}
-      connection-timeout: 10000
-      validation-timeout: 5000
-      max-lifetime: 480000
-      keepalive-time: 120000
+      connection-timeout: 5000
+      validation-timeout: 1000
+      idle-timeout: 60000
+      max-lifetime: 180000
+      # Keepalive cannot run while the Lambda is frozen; prefer fail-fast validation on borrow.
+      keepalive-time: 0
+      initialization-fail-timeout: -1
   data:
     redis:
       # Must be rediss:// for Upstash (TLS required)
