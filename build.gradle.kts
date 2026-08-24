@@ -73,7 +73,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-flyway:4.0.5")
     implementation("org.flywaydb:flyway-core:12.4.0")
     implementation("org.flywaydb:flyway-database-postgresql")
-    implementation("org.crac:crac:1.5.0")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter:1.20.4")
