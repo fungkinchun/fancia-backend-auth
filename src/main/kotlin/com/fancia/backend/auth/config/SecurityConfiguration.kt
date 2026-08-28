@@ -26,6 +26,9 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -131,8 +134,12 @@ class SecurityConfiguration(
             }
 
         if (clientRegistrationRepository.ifAvailable != null) {
+            val clients = clientRegistrationRepository.getObject()
             http.oauth2Login { oauth2 ->
                 oauth2.loginPage("/login")
+                    .authorizationEndpoint { endpoint ->
+                        endpoint.authorizationRequestResolver(googleSelectAccountRequestResolver(clients))
+                    }
                     .redirectionEndpoint { endpoint ->
                         endpoint.baseUri("/callback")
                     }
@@ -145,6 +152,21 @@ class SecurityConfiguration(
         }
 
         return http.build()
+    }
+
+    private fun googleSelectAccountRequestResolver(
+        clients: ClientRegistrationRepository,
+    ): OAuth2AuthorizationRequestResolver {
+        val resolver = DefaultOAuth2AuthorizationRequestResolver(
+            clients,
+            OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI,
+        )
+        resolver.setAuthorizationRequestCustomizer { customizer ->
+            customizer.additionalParameters { params ->
+                params["prompt"] = "select_account"
+            }
+        }
+        return resolver
     }
 
     @Bean
