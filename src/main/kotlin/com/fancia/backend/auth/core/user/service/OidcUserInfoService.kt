@@ -18,6 +18,7 @@ class OidcUserInfoService(private val userDetailsService: UserDetailsService) {
             .emailVerified(user.status == AccountStatus.ACTIVE)
             .picture(user.profileImageUrl)
             .claim("roles", user.role)
+            .claim("isPremium", user.premiumActive)
             .build()
     }
 }

@@ -246,6 +246,7 @@ class SecurityConfiguration(
                     context.claims.claim("email", user.email)
                     context.claims.claim("name", "${user.firstName} ${user.lastName}")
                     context.claims.claim("userId", user.id)
+                    context.claims.claim("isPremium", user.premiumActive)
                 }
             }
         }
@@ -257,6 +258,7 @@ class SecurityConfiguration(
                     context.claims.claim("name", "${user.firstName} ${user.lastName}")
                     context.claims.claim("email", user.email)
                     context.claims.claim("userId", user.id)
+                    context.claims.claim("isPremium", user.premiumActive)
                     user.profileImageUrl?.let {
                         context.claims.claim("profileImageUrl", user.profileImageUrl)
                     }
