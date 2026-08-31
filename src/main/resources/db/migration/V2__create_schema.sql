@@ -94,11 +94,61 @@ comment on column comments.deleted is 'Soft-delete indicator';
 create table post_likes (liked_at timestamp(6), post_id uuid not null, user_id uuid not null, primary key (post_id, user_id));
 create table post_media (deleted boolean not null, sort_order integer not null, created_at timestamp(6), created_by uuid, id uuid not null, media_type varchar(16) not null check ((media_type in ('IMAGE','VIDEO'))), post_id uuid not null, object_key varchar(1024) not null, primary key (id));
 comment on column post_media.deleted is 'Soft-delete indicator';
-create table posts (deleted boolean not null, is_featured boolean not null, is_pinned boolean not null, created_at timestamp(6), author_user_id uuid not null, created_by uuid, id uuid not null, target_id uuid not null, body varchar(4000), primary key (id));
+create table posts (
+    deleted boolean not null,
+    created_at timestamp(6),
+    author_user_id uuid not null,
+    created_by uuid,
+    id uuid not null,
+    target_id uuid not null,
+    body varchar(4000),
+    kind varchar(16) not null default 'TEXT',
+    status varchar(16) not null default 'VISIBLE',
+    expired_at timestamp(6),
+    primary key (id),
+    constraint posts_kind_check check (kind in ('TEXT', 'POLL')),
+    constraint posts_status_check check (status in ('VISIBLE', 'FEATURED', 'PINNED', 'READ_ONLY', 'HIDDEN'))
+);
 comment on column posts.deleted is 'Soft-delete indicator';
+create index posts_expired_at_status_idx on posts (expired_at, status)
+    where deleted = false and expired_at is not null;
 alter table if exists comment_likes add constraint FK3wa5u7bs1p1o9hmavtgdgk1go foreign key (comment_id) references comments;
 alter table if exists post_likes add constraint FKa5wxsgl4doibhbed9gm7ikie2 foreign key (post_id) references posts;
 alter table if exists post_media add constraint FK1urcum9dtf0vgul7k405f4r2d foreign key (post_id) references posts;
+
+create table post_polls (
+    post_id uuid not null,
+    allow_multiple boolean not null default false,
+    closes_at timestamp(6),
+    primary key (post_id),
+    constraint fk_post_polls_post foreign key (post_id) references posts (id)
+);
+
+create table post_poll_options (
+    deleted boolean not null default false,
+    sort_order integer not null,
+    created_at timestamp(6),
+    created_by uuid,
+    id uuid not null,
+    post_id uuid not null,
+    label varchar(255) not null,
+    primary key (id),
+    constraint fk_post_poll_options_poll foreign key (post_id) references post_polls (post_id)
+);
+
+create index post_poll_options_post_id_idx on post_poll_options (post_id);
+
+create table post_poll_votes (
+    voted_at timestamp(6),
+    post_id uuid not null,
+    option_id uuid not null,
+    user_id uuid not null,
+    primary key (post_id, option_id, user_id),
+    constraint fk_post_poll_votes_poll foreign key (post_id) references post_polls (post_id),
+    constraint fk_post_poll_votes_option foreign key (option_id) references post_poll_options (id)
+);
+
+create index post_poll_votes_post_user_idx on post_poll_votes (post_id, user_id);
 
 create table interest_groups (deleted boolean not null, created_at timestamp(6), created_by uuid, id uuid not null, description varchar(4000) not null, name varchar(255) not null, slug varchar(255) not null, primary key (id));
 comment on column interest_groups.deleted is 'Soft-delete indicator';
@@ -233,6 +283,8 @@ create table events (
     country varchar(100),
     description varchar(4000) not null,
     name varchar(255) not null,
+    event_type varchar(32) not null default 'REGULAR'
+        check (event_type in ('REGULAR', 'SPONTANEOUS')),
     visibility varchar(255) not null check ((visibility in ('PUBLIC','GROUP','PRIVATE'))),
     recurrence_frequency varchar(32) not null default 'NONE',
     recurrence_days_mask smallint not null default 0,
@@ -242,6 +294,7 @@ create table events (
     primary key (id)
 );
 comment on column events.deleted is 'Soft-delete indicator';
+create index events_event_type_idx on events (event_type) where deleted = false;
 create table event_interest_groups (event_id uuid not null, event_interest_groups uuid);
 create table event_venues (event_id uuid not null, event_venues uuid);
 create table event_tags (event_id uuid not null, tag_id uuid not null, primary key (event_id, tag_id));
@@ -464,7 +517,7 @@ create index friendships_requester_id_idx on friendships (requester_id);
 create index friendships_addressee_id_idx on friendships (addressee_id);
 create index friendships_status_idx on friendships (status);
 
--- Unified DM + group-inquiry channel registry (no separate chat_group_inquiry_channels table).
+-- Unified DM + group-inquiry + support + event channel registry.
 create table chat_channels (
     deleted boolean not null default false,
     created_at timestamp(6),
@@ -476,9 +529,10 @@ create table chat_channels (
     kind varchar(32) not null default 'DM',
     interest_group_id uuid,
     initiator_user_id uuid,
+    event_id uuid,
     primary key (id),
     constraint uk_chat_channels_channel_id unique (channel_id),
-    constraint chat_channels_kind_check check (kind in ('DM', 'GROUP_INQUIRY'))
+    constraint chat_channels_kind_check check (kind in ('DM', 'GROUP_INQUIRY', 'SUPPORT', 'EVENT'))
 );
 create unique index uk_chat_channels_dm_pair
     on chat_channels (first_user_id, second_user_id)
@@ -492,11 +546,22 @@ create unique index uk_chat_channels_group_inquiry_pair
       and deleted = false
       and interest_group_id is not null
       and initiator_user_id is not null;
+create unique index uk_chat_channels_support_initiator
+    on chat_channels (initiator_user_id)
+    where kind = 'SUPPORT'
+      and deleted = false
+      and initiator_user_id is not null;
+create unique index uk_chat_channels_event
+    on chat_channels (event_id)
+    where kind = 'EVENT'
+      and deleted = false
+      and event_id is not null;
 create index chat_channels_first_user_id_idx on chat_channels (first_user_id);
 create index chat_channels_second_user_id_idx on chat_channels (second_user_id);
 create index chat_channels_kind_idx on chat_channels (kind);
 create index chat_channels_interest_group_id_idx on chat_channels (interest_group_id);
 create index chat_channels_initiator_user_id_idx on chat_channels (initiator_user_id);
+create index chat_channels_event_id_idx on chat_channels (event_id);
 
 create table chat_channel_members (
     deleted boolean not null default false,
