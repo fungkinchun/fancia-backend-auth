@@ -9,4 +9,6 @@ import java.util.*
 @Repository
 interface UserRepository : JpaRepository<User, UUID> {
     fun findByEmail(@Param("email") email: String): User?
+
+    fun findBySlug(slug: String): User?
 }

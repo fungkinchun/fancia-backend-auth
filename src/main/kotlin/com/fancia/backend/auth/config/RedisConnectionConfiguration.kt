@@ -38,7 +38,6 @@ class RedisConnectionConfiguration(
                 when (parts.size) {
                     1 -> password = RedisPassword.of(parts[0])
                     2 -> {
-                        // Upstash uses username "default" + password token
                         if (parts[0].isNotBlank()) {
                             username = parts[0]
                         }
@@ -92,7 +91,6 @@ class RedisConnectionConfiguration(
 
     private fun normalizeRedisUrl(raw: String): String {
         val trimmed = raw.trim()
-        // Common copy/paste: Upstash host with redis:// instead of rediss://
         if (trimmed.startsWith("redis://", ignoreCase = true) &&
             trimmed.contains("upstash.io", ignoreCase = true)
         ) {

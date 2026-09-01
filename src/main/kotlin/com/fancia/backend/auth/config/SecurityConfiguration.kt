@@ -3,6 +3,7 @@ package com.fancia.backend.auth.config
 import com.fancia.backend.auth.core.user.service.OidcUserInfoService
 import com.fancia.backend.auth.security.AppOidcUser
 import com.fancia.backend.auth.security.GoogleOAuth2UserService
+import com.fancia.backend.auth.security.LoginAuthenticationFailureHandler
 import com.fancia.backend.shared.user.core.entity.User
 import com.nimbusds.jose.jwk.source.JWKSource
 import com.nimbusds.jose.proc.SecurityContext
@@ -14,7 +15,6 @@ import org.springframework.core.annotation.Order
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.AuthenticationProvider
-import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.ProviderManager
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer
@@ -23,6 +23,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
@@ -130,7 +131,10 @@ class SecurityConfiguration(
             authorize.anyRequest().authenticated()
         }.oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
             .formLogin { form ->
-                form.loginPage("/login").loginProcessingUrl("/login").permitAll()
+                form.loginPage("/login")
+                    .loginProcessingUrl("/login")
+                    .failureHandler(LoginAuthenticationFailureHandler())
+                    .permitAll()
             }
 
         if (clientRegistrationRepository.ifAvailable != null) {
@@ -305,7 +309,7 @@ class SecurityConfiguration(
     private fun loadUserByEmail(email: String): User? {
         return try {
             userDetailsService.loadUserByUsername(email) as User
-        } catch (_: BadCredentialsException) {
+        } catch (_: UsernameNotFoundException) {
             null
         }
     }

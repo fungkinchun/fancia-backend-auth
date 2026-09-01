@@ -4,6 +4,7 @@ import com.fancia.backend.auth.core.user.repository.UserConnectedAccountReposito
 import com.fancia.backend.auth.core.user.repository.UserRepository
 import com.fancia.backend.shared.user.core.entity.User
 import com.fancia.backend.shared.user.core.entity.UserConnectedAccount
+import com.fancia.backend.shared.user.core.support.DefaultUserSlug
 import com.fancia.backend.shared.user.core.enums.AccountStatus
 import com.fancia.backend.shared.user.core.enums.ConnectedAccountProvider
 import org.slf4j.LoggerFactory
@@ -46,10 +47,12 @@ class GoogleOAuth2UserService(
         userRepository.findByEmail(email)?.let { existing ->
             linkGoogleAccount(existing, googleSub)
             applyInitialProfileFromGoogle(existing, oauth2User)
+            assignDefaultSlugIfMissing(existing)
             return userRepository.save(existing)
         }
         val newUser = User(oauth2User).apply {
             applyInitialProfileFromGoogle(this, oauth2User)
+            assignDefaultSlugIfMissing(this)
         }
         val savedUser = userRepository.save(newUser)
         linkGoogleAccount(savedUser, googleSub)
@@ -84,5 +87,12 @@ class GoogleOAuth2UserService(
             }
         }
         user.status = AccountStatus.ACTIVE
+    }
+
+    private fun assignDefaultSlugIfMissing(user: User) {
+        if (!user.slug.isNullOrBlank()) return
+        user.slug = DefaultUserSlug.generate(user) { candidate ->
+            userRepository.findBySlug(candidate) != null
+        }
     }
 }
