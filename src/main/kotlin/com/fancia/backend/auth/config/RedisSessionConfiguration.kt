@@ -22,7 +22,6 @@ import tools.jackson.databind.JacksonModule
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 
-
 @Configuration
 @ConditionalOnProperty(prefix = "spring.data.redis", name = ["url"])
 @ConditionalOnBean(RedisConnectionFactory::class)

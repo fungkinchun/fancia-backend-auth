@@ -2,8 +2,9 @@ package com.fancia.backend.auth.config
 
 import com.fancia.backend.auth.core.user.service.OidcUserInfoService
 import com.fancia.backend.auth.security.AppOidcUser
-import com.fancia.backend.auth.security.GoogleOAuth2UserService
+import com.fancia.backend.auth.security.AppleClientSecretGenerator
 import com.fancia.backend.auth.security.LoginAuthenticationFailureHandler
+import com.fancia.backend.auth.security.SocialOidcUserService
 import com.fancia.backend.shared.user.core.entity.User
 import com.nimbusds.jose.jwk.source.JWKSource
 import com.nimbusds.jose.proc.SecurityContext
@@ -26,10 +27,13 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -48,6 +52,7 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.*
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
 import org.springframework.security.web.util.matcher.RequestMatcher
+import org.springframework.util.LinkedMultiValueMap
 import java.util.function.Function
 
 @Configuration
@@ -55,7 +60,8 @@ import java.util.function.Function
 class SecurityConfiguration(
     private val userDetailsService: UserDetailsService,
     private val oidcUserInfoService: OidcUserInfoService,
-    private val oAuth2UserService: GoogleOAuth2UserService,
+    private val oAuth2UserService: SocialOidcUserService,
+    private val appleClientSecretGenerator: AppleClientSecretGenerator,
     private val registeredClientRepository: RegisteredClientRepository,
     private val authorizationService: OAuth2AuthorizationService,
     private val jwtSigningKeySource: JwtSigningKeySource,
@@ -142,10 +148,13 @@ class SecurityConfiguration(
             http.oauth2Login { oauth2 ->
                 oauth2.loginPage("/login")
                     .authorizationEndpoint { endpoint ->
-                        endpoint.authorizationRequestResolver(googleSelectAccountRequestResolver(clients))
+                        endpoint.authorizationRequestResolver(socialAuthorizationRequestResolver(clients))
                     }
                     .redirectionEndpoint { endpoint ->
                         endpoint.baseUri("/callback")
+                    }
+                    .tokenEndpoint { endpoint ->
+                        endpoint.accessTokenResponseClient(appleAwareAccessTokenResponseClient())
                     }
                     .userInfoEndpoint { userInfo ->
                         userInfo.oidcUserService(oAuth2UserService)
@@ -158,19 +167,54 @@ class SecurityConfiguration(
         return http.build()
     }
 
-    private fun googleSelectAccountRequestResolver(
+    
+
+    private fun socialAuthorizationRequestResolver(
         clients: ClientRegistrationRepository,
     ): OAuth2AuthorizationRequestResolver {
-        val resolver = DefaultOAuth2AuthorizationRequestResolver(
+        val defaultResolver = DefaultOAuth2AuthorizationRequestResolver(
             clients,
             OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI,
         )
-        resolver.setAuthorizationRequestCustomizer { customizer ->
-            customizer.additionalParameters { params ->
-                params["prompt"] = "select_account"
+        return object : OAuth2AuthorizationRequestResolver {
+            override fun resolve(request: jakarta.servlet.http.HttpServletRequest): OAuth2AuthorizationRequest? =
+                customize(defaultResolver.resolve(request))
+
+            override fun resolve(
+                request: jakarta.servlet.http.HttpServletRequest,
+                clientRegistrationId: String,
+            ): OAuth2AuthorizationRequest? =
+                customize(defaultResolver.resolve(request, clientRegistrationId))
+
+            private fun customize(request: OAuth2AuthorizationRequest?): OAuth2AuthorizationRequest? {
+                if (request == null) return null
+                val registrationId = request.attributes["registration_id"] as? String
+                return when (registrationId) {
+                    "google" ->
+                        OAuth2AuthorizationRequest.from(request)
+                            .additionalParameters { params -> params["prompt"] = "select_account" }
+                            .build()
+                    "apple" ->
+                        OAuth2AuthorizationRequest.from(request)
+                            .additionalParameters { params -> params["response_mode"] = "form_post" }
+                            .build()
+                    else -> request
+                }
             }
         }
-        return resolver
+    }
+
+    
+    private fun appleAwareAccessTokenResponseClient(): RestClientAuthorizationCodeTokenResponseClient {
+        val client = RestClientAuthorizationCodeTokenResponseClient()
+        client.addParametersConverter { grantRequest ->
+            val parameters = LinkedMultiValueMap<String, String>()
+            if (grantRequest.clientRegistration.registrationId == "apple") {
+                parameters.set(OAuth2ParameterNames.CLIENT_SECRET, appleClientSecretGenerator.generate())
+            }
+            parameters
+        }
+        return client
     }
 
     @Bean

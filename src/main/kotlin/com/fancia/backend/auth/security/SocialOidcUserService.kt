@@ -4,9 +4,9 @@ import com.fancia.backend.auth.core.user.repository.UserConnectedAccountReposito
 import com.fancia.backend.auth.core.user.repository.UserRepository
 import com.fancia.backend.shared.user.core.entity.User
 import com.fancia.backend.shared.user.core.entity.UserConnectedAccount
-import com.fancia.backend.shared.user.core.support.DefaultUserSlug
 import com.fancia.backend.shared.user.core.enums.AccountStatus
 import com.fancia.backend.shared.user.core.enums.ConnectedAccountProvider
+import com.fancia.backend.shared.user.core.support.DefaultUserSlug
 import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class GoogleOAuth2UserService(
+class SocialOidcUserService(
     private val userRepository: UserRepository,
     private val connectedAccountRepository: UserConnectedAccountRepository,
 ) : OidcUserService() {
@@ -27,51 +27,64 @@ class GoogleOAuth2UserService(
     override fun loadUser(userRequest: OidcUserRequest): OidcUser {
         val oidcUser = super.loadUser(userRequest)
         val registrationId = userRequest.clientRegistration.registrationId
-        require(registrationId == "google") {
-            "Unsupported OAuth2 registration: $registrationId"
-        }
-        val googleSub = oidcUser.name
+        val provider = providerFor(registrationId)
+        val providerSubject = oidcUser.name
         val email = oidcUser.getAttribute<String>("email")
-            ?: throw OAuth2AuthenticationException("Google did not return an email address")
-        val user = findOrCreateUser(googleSub, email, oidcUser)
-        log.info("Google OAuth2 login provisioned user {}", user.email)
+        val user = findOrCreateUser(provider, providerSubject, email, oidcUser)
+        log.info("{} OAuth2 login provisioned user {}", registrationId, user.email)
         return AppOidcUser.from(user, oidcUser)
     }
 
-    private fun findOrCreateUser(googleSub: String, email: String, oauth2User: OAuth2User): User {
+    private fun providerFor(registrationId: String): String =
+        when (registrationId) {
+            "google" -> ConnectedAccountProvider.GOOGLE.value
+            "apple" -> "apple" 
+            else -> throw OAuth2AuthenticationException("Unsupported OAuth2 registration: $registrationId")
+        }
+
+    private fun findOrCreateUser(
+        provider: String,
+        providerSubject: String,
+        email: String?,
+        oauth2User: OAuth2User,
+    ): User {
         connectedAccountRepository
-            .findByProviderAndProviderIdWithUser(ConnectedAccountProvider.GOOGLE.value, googleSub)
+            .findByProviderAndProviderIdWithUser(provider, providerSubject)
             ?.user
             ?.let { return it }
 
-        userRepository.findByEmail(email)?.let { existing ->
-            linkGoogleAccount(existing, googleSub)
-            applyInitialProfileFromGoogle(existing, oauth2User)
+        val resolvedEmail = email?.trim()?.takeIf { it.isNotEmpty() }
+            ?: throw OAuth2AuthenticationException(
+                "$provider did not return an email address; cannot create a new account",
+            )
+
+        userRepository.findByEmail(resolvedEmail)?.let { existing ->
+            linkAccount(existing, provider, providerSubject)
+            applyInitialProfile(existing, oauth2User)
             assignDefaultSlugIfMissing(existing)
             return userRepository.save(existing)
         }
+
         val newUser = User(oauth2User).apply {
-            applyInitialProfileFromGoogle(this, oauth2User)
+            applyInitialProfile(this, oauth2User)
             assignDefaultSlugIfMissing(this)
         }
         val savedUser = userRepository.save(newUser)
-        linkGoogleAccount(savedUser, googleSub)
-        log.info("Registered new user via Google OAuth2: {}", savedUser.email)
+        linkAccount(savedUser, provider, providerSubject)
+        log.info("Registered new user via {} OAuth2: {}", provider, savedUser.email)
         return savedUser
     }
 
-    private fun linkGoogleAccount(user: User, googleSub: String) {
+    private fun linkAccount(user: User, provider: String, providerSubject: String) {
         val alreadyLinked = connectedAccountRepository
-            .findByProviderAndProviderIdWithUser(ConnectedAccountProvider.GOOGLE.value, googleSub) != null
+            .findByProviderAndProviderIdWithUser(provider, providerSubject) != null
         if (alreadyLinked) {
             return
         }
-        connectedAccountRepository.save(
-            UserConnectedAccount(ConnectedAccountProvider.GOOGLE.value, googleSub, user)
-        )
+        connectedAccountRepository.save(UserConnectedAccount(provider, providerSubject, user))
     }
 
-    private fun applyInitialProfileFromGoogle(user: User, oauth2User: OAuth2User) {
+    private fun applyInitialProfile(user: User, oauth2User: OAuth2User) {
         oauth2User.getAttribute<String>("given_name")?.let { user.firstName = it }
         oauth2User.getAttribute<String>("family_name")?.let { user.lastName = it }
 
