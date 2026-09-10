@@ -3,12 +3,19 @@ package com.fancia.backend.auth
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.persistence.autoconfigure.EntityScan
 import org.springframework.boot.runApplication
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 
 @EntityScan(
     basePackages = [
         "com.fancia.backend.auth",
         "com.fancia.backend.shared.auth.core.client.entity",
         "com.fancia.backend.shared.user.core.entity"
+    ]
+)
+@EnableJpaRepositories(
+    basePackages = [
+        "com.fancia.backend.auth",
+        "com.fancia.backend.shared.user.core.repository",
     ]
 )
 @SpringBootApplication

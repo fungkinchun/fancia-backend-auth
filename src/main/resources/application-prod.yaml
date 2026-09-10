@@ -1,4 +1,5 @@
 server:
+  forward-headers-strategy: framework
   servlet:
     context-path: /${REPO_NAME}
     session:
@@ -6,14 +7,56 @@ server:
         secure: true
         http-only: true
         same-site: none
+  error:
+    whitelabel:
+      enabled: false
 spring:
   config:
     import:
       - aws-secretsmanager:${ENV}/${PROJECT_NAME}/oauth2
       - aws-secretsmanager:${ENV}/${PROJECT_NAME}/redis
+  mvc:
+    cors:
+      mappings:
+        "[/**]":
+          allowed-origins:
+            - "http://localhost:3000"
+            - "https://fancia.co.uk"
+            - "https://www.fancia.co.uk"
+            - "https://dev.fancia.co.uk"
+          allowed-methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - OPTIONS
+          allowed-headers:
+            - Authorization
+            - Content-Type
+            - Accept
+          exposed-headers:
+            - Authorization
+            - Content-Type
+          allow-credentials: true
+          max-age: 3600
+  web:
+    resources:
+      chain:
+        enabled: true
+        strategy:
+          content:
+            enabled: true
+            paths: /**
+      cache:
+        cachecontrol:
+          max-age: 365d
+          cache-public: true
+          immutable: true
   security:
     oauth2:
       authorizationserver:
+        issuer: https://api.${DOMAIN_NAME}/${REPO_NAME}
         client:
           oidc-client:
             registration:
@@ -27,9 +70,13 @@ spring:
                 - "refresh_token"
                 - "client_credentials"
               redirect-uris:
-                - "http://${DOMAIN_NAME}/login/oauth2/code/oidc-client"
+                - "https://${DOMAIN_NAME}/login/oauth2/code/oidc-client"
+                - "https://www.${DOMAIN_NAME}/login/oauth2/code/oidc-client"
+                - "${PROJECT_NAME}://oauth/callback"
               post-logout-redirect-uris:
-                - "http://${DOMAIN_NAME}/"
+                - "https://${DOMAIN_NAME}/"
+                - "https://www.${DOMAIN_NAME}/"
+                - "${PROJECT_NAME}://oauth/logout"
               scopes:
                 - "openid"
                 - "profile"
@@ -128,3 +175,4 @@ management:
   endpoint:
     prometheus:
       enabled: true
+

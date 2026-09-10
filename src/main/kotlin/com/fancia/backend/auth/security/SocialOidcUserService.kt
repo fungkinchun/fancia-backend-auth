@@ -1,7 +1,7 @@
 package com.fancia.backend.auth.security
 
 import com.fancia.backend.auth.core.user.repository.UserConnectedAccountRepository
-import com.fancia.backend.auth.core.user.repository.UserRepository
+import com.fancia.backend.shared.user.core.repository.UserRepository
 import com.fancia.backend.shared.user.core.entity.User
 import com.fancia.backend.shared.user.core.entity.UserConnectedAccount
 import com.fancia.backend.shared.user.core.enums.AccountStatus

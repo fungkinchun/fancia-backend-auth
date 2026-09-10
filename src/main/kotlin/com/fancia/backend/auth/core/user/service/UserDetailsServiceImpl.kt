@@ -1,6 +1,6 @@
 package com.fancia.backend.auth.core.user.service
 
-import com.fancia.backend.auth.core.user.repository.UserRepository
+import com.fancia.backend.shared.user.core.repository.UserRepository
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
