@@ -37,7 +37,7 @@ class SocialOidcUserService(
         val providerSubject = oidcUser.subject ?: oidcUser.name
         val email = oidcUser.getAttribute<String>("email")
             ?: oidcUser.idToken.getClaimAsString("email")
-        val user = findOrCreateUser(provider, providerSubject, email, oidcUser)
+        val user = findOrCreateUser(registrationId, provider, providerSubject, email, oidcUser)
         log.info("{} OAuth2 login provisioned user {}", registrationId, user.email)
         return oidcUser
     }
@@ -50,6 +50,7 @@ class SocialOidcUserService(
         }
 
     private fun findOrCreateUser(
+        registrationId: String,
         provider: String,
         providerSubject: String,
         email: String?,
@@ -58,7 +59,12 @@ class SocialOidcUserService(
         connectedAccountRepository
             .findByProviderAndProviderIdWithUser(provider, providerSubject)
             ?.user
-            ?.let { return it }
+            ?.let {
+                if (registrationId == "apple") {
+                    AppleSignInUser.consumeNameFromCurrentRequest()
+                }
+                return it
+            }
 
         val resolvedEmail = email?.trim()?.takeIf { it.isNotEmpty() }
             ?: throw OAuth2AuthenticationException(
@@ -67,13 +73,13 @@ class SocialOidcUserService(
 
         userRepository.findByEmail(resolvedEmail)?.let { existing ->
             linkAccount(existing, provider, providerSubject)
-            applyInitialProfile(existing, oauth2User)
+            applyInitialProfile(existing, oauth2User, registrationId)
             assignDefaultSlugIfMissing(existing)
             return userRepository.save(existing)
         }
 
         val newUser = User(oauth2User).apply {
-            applyInitialProfile(this, oauth2User)
+            applyInitialProfile(this, oauth2User, registrationId)
             assignDefaultSlugIfMissing(this)
         }
         val savedUser = userRepository.save(newUser)
@@ -91,7 +97,7 @@ class SocialOidcUserService(
         connectedAccountRepository.save(UserConnectedAccount(provider, providerSubject, user))
     }
 
-    private fun applyInitialProfile(user: User, oauth2User: OAuth2User) {
+    private fun applyInitialProfile(user: User, oauth2User: OAuth2User, registrationId: String) {
         oauth2User.getAttribute<String>("given_name")?.let { user.firstName = it }
         oauth2User.getAttribute<String>("family_name")?.let { user.lastName = it }
 
@@ -106,6 +112,18 @@ class SocialOidcUserService(
                 }
             }
         }
+
+        if (registrationId == "apple") {
+            AppleSignInUser.consumeNameFromCurrentRequest()?.let { appleName ->
+                if (user.firstName.isNullOrBlank() && !appleName.firstName.isNullOrBlank()) {
+                    user.firstName = appleName.firstName
+                }
+                if (user.lastName.isNullOrBlank() && !appleName.lastName.isNullOrBlank()) {
+                    user.lastName = appleName.lastName
+                }
+            }
+        }
+
         user.status = AccountStatus.ACTIVE
     }
 

@@ -3,6 +3,7 @@ package com.fancia.backend.auth.config
 import com.fancia.backend.auth.core.user.service.OidcUserInfoService
 import com.fancia.backend.auth.security.AppOidcUser
 import com.fancia.backend.auth.security.AppleClientSecretGenerator
+import com.fancia.backend.auth.security.AppleSignInUserCaptureFilter
 import com.fancia.backend.auth.security.LoginAuthenticationFailureHandler
 import com.fancia.backend.auth.security.OAuth2LoginFailureHandler
 import com.fancia.backend.auth.security.SocialOidcUserService
@@ -37,6 +38,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
@@ -174,6 +176,10 @@ class SecurityConfiguration(
                     .successHandler(oauth2AuthenticationSuccessHandler())
                     .failureHandler(oauth2LoginFailureHandler)
             }
+            http.addFilterBefore(
+                AppleSignInUserCaptureFilter(),
+                OAuth2LoginAuthenticationFilter::class.java,
+            )
         }
 
         return http.build()
