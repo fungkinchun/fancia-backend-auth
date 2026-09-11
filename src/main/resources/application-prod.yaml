@@ -141,7 +141,7 @@ spring:
   data:
     redis:
       url: ${REDIS_URL}
-      timeout: 3s
+      timeout: 10s
       connect-timeout: 5s
       ssl:
         enabled: true
