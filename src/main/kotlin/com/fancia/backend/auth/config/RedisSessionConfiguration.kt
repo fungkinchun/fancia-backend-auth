@@ -5,22 +5,27 @@ import com.fancia.backend.auth.security.AppOidcUser
 import com.fancia.backend.auth.security.AppOidcUserMixin
 import com.fancia.backend.shared.user.core.entity.User
 import org.springframework.beans.factory.BeanClassLoaderAware
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.data.redis.connection.RedisConnectionFactory
+import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializer
 import org.springframework.security.jackson.SecurityJacksonModules
 import org.springframework.security.oauth2.client.jackson.OAuth2ClientJacksonModule
 import org.springframework.security.oauth2.server.authorization.jackson.OAuth2AuthorizationServerJacksonModule
+import org.springframework.session.data.redis.RedisSessionRepository
 import org.springframework.session.web.http.CookieSerializer
 import org.springframework.session.web.http.DefaultCookieSerializer
 import tools.jackson.databind.JacksonModule
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
+import java.time.Duration
 
 @Configuration
 @ConditionalOnProperty(prefix = "spring.data.redis", name = ["url"])
@@ -71,5 +76,26 @@ class RedisSessionConfiguration(
 
         @Suppress("UNCHECKED_CAST")
         return JacksonJsonRedisSerializer(mapper, Any::class.java) as RedisSerializer<Any>
+    }
+
+    @Bean
+    @Primary
+    fun sessionRepository(
+        connectionFactory: RedisConnectionFactory,
+        @Qualifier("springSessionDefaultRedisSerializer") serializer: RedisSerializer<Any>,
+        @Value("\${spring.session.timeout:30m}") timeout: Duration,
+        @Value("\${spring.session.redis.namespace:spring:session}") namespace: String,
+    ): RedisSessionRepository {
+        val template = RedisTemplate<String, Any>()
+        template.connectionFactory = connectionFactory
+        template.keySerializer = RedisSerializer.string()
+        template.hashKeySerializer = RedisSerializer.string()
+        template.valueSerializer = serializer
+        template.hashValueSerializer = serializer
+        template.afterPropertiesSet()
+        return RedisSessionRepository(template).apply {
+            setDefaultMaxInactiveInterval(timeout)
+            setRedisKeyNamespace(namespace)
+        }
     }
 }
