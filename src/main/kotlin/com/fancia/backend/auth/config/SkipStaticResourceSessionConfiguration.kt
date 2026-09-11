@@ -3,6 +3,7 @@ package com.fancia.backend.auth.config
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
 import org.springframework.session.Session
 import org.springframework.session.SessionRepository
 import org.springframework.web.context.request.RequestContextHolder
@@ -13,7 +14,9 @@ class SkipStaticResourceSessionConfiguration {
 
     @Bean
     fun skipStaticResourceSessionRepositoryPostProcessor(): BeanPostProcessor =
-        object : BeanPostProcessor {
+        object : BeanPostProcessor, Ordered {
+            override fun getOrder(): Int = Ordered.LOWEST_PRECEDENCE
+
             override fun postProcessAfterInitialization(bean: Any, beanName: String): Any {
                 if (bean is SessionRepository<*> && bean !is SkipStaticResourceSessionRepository<*>) {
                     @Suppress("UNCHECKED_CAST")

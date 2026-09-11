@@ -7,12 +7,16 @@ import com.fancia.backend.shared.user.core.entity.User
 import org.springframework.beans.factory.BeanClassLoaderAware
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
+import org.springframework.core.Ordered
+import org.springframework.core.PriorityOrdered
 import org.springframework.data.redis.connection.RedisConnectionFactory
+import org.springframework.data.redis.core.RedisOperations
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializer
@@ -78,24 +82,59 @@ class RedisSessionConfiguration(
         return JacksonJsonRedisSerializer(mapper, Any::class.java) as RedisSerializer<Any>
     }
 
+    @Bean(name = ["sessionRedisOperations"])
+    fun sessionRedisOperations(
+        connectionFactory: RedisConnectionFactory,
+        @Qualifier("springSessionDefaultRedisSerializer") serializer: RedisSerializer<Any>,
+    ): RedisOperations<String, Any> = jacksonSessionRedisTemplate(connectionFactory, serializer)
+
     @Bean
     @Primary
     fun sessionRepository(
-        connectionFactory: RedisConnectionFactory,
-        @Qualifier("springSessionDefaultRedisSerializer") serializer: RedisSerializer<Any>,
+        sessionRedisOperations: RedisOperations<String, Any>,
         @Value("\${spring.session.timeout:30m}") timeout: Duration,
         @Value("\${spring.session.redis.namespace:spring:session}") namespace: String,
-    ): RedisSessionRepository {
+    ): RedisSessionRepository = jacksonSessionRepository(sessionRedisOperations, timeout, namespace)
+
+    @Bean
+    fun redisSessionJacksonEnforcer(
+        sessionRedisOperations: RedisOperations<String, Any>,
+        @Value("\${spring.session.timeout:30m}") timeout: Duration,
+        @Value("\${spring.session.redis.namespace:spring:session}") namespace: String,
+    ): BeanPostProcessor =
+        object : BeanPostProcessor, PriorityOrdered {
+            override fun getOrder(): Int = Ordered.HIGHEST_PRECEDENCE
+
+            override fun postProcessAfterInitialization(bean: Any, beanName: String): Any {
+                if (bean is RedisSessionRepository) {
+                    return jacksonSessionRepository(sessionRedisOperations, timeout, namespace)
+                }
+                return bean
+            }
+        }
+
+    private fun jacksonSessionRedisTemplate(
+        connectionFactory: RedisConnectionFactory,
+        serializer: RedisSerializer<Any>,
+    ): RedisTemplate<String, Any> {
         val template = RedisTemplate<String, Any>()
         template.connectionFactory = connectionFactory
         template.keySerializer = RedisSerializer.string()
         template.hashKeySerializer = RedisSerializer.string()
         template.valueSerializer = serializer
         template.hashValueSerializer = serializer
+        template.defaultSerializer = serializer
         template.afterPropertiesSet()
-        return RedisSessionRepository(template).apply {
+        return template
+    }
+
+    private fun jacksonSessionRepository(
+        sessionRedisOperations: RedisOperations<String, Any>,
+        timeout: Duration,
+        namespace: String,
+    ): RedisSessionRepository =
+        RedisSessionRepository(sessionRedisOperations).apply {
             setDefaultMaxInactiveInterval(timeout)
             setRedisKeyNamespace(namespace)
         }
-    }
 }

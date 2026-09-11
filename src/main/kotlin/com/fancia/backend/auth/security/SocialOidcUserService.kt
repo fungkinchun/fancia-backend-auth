@@ -39,7 +39,7 @@ class SocialOidcUserService(
             ?: oidcUser.idToken.getClaimAsString("email")
         val user = findOrCreateUser(provider, providerSubject, email, oidcUser)
         log.info("{} OAuth2 login provisioned user {}", registrationId, user.email)
-        return AppOidcUser.from(user, oidcUser)
+        return oidcUser
     }
 
     private fun providerFor(registrationId: String): String =

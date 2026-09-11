@@ -84,7 +84,6 @@ class AppleClientSecretGenerator(
     private data class CachedSecret(val value: String, val expiresAt: Instant)
 
     companion object {
-        
         private const val TOKEN_TTL_SECONDS = 60L * 60L * 24L * 150L
     }
 }
