@@ -27,6 +27,7 @@ import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 @ConditionalOnBean(RedisConnectionFactory::class)
 class RedisSessionConfiguration(
     @Value("\${server.servlet.session.cookie.secure:true}") private val secureCookie: Boolean,
+    @Value("\${server.servlet.session.cookie.same-site:none}") private val sameSite: String,
 ) : BeanClassLoaderAware {
     private var classLoader: ClassLoader = RedisSessionConfiguration::class.java.classLoader
 
@@ -40,7 +41,7 @@ class RedisSessionConfiguration(
             setCookieName("SESSION")
             setCookiePath("/")
             setUseHttpOnlyCookie(true)
-            setSameSite("Lax")
+            setSameSite(sameSite)
             setUseSecureCookie(secureCookie)
         }
 

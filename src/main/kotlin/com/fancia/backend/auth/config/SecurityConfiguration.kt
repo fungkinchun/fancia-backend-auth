@@ -135,6 +135,8 @@ class SecurityConfiguration(
             authorize.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
             authorize.requestMatchers("/actuator/**").permitAll()
             authorize.anyRequest().authenticated()
+        }.csrf { csrf ->
+            csrf.ignoringRequestMatchers("/callback")
         }.oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
             .formLogin { form ->
                 form.loginPage("/login")
