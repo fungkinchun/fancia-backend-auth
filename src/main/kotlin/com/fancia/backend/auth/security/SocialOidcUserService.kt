@@ -23,13 +23,20 @@ class SocialOidcUserService(
 ) : OidcUserService() {
     private val log = LoggerFactory.getLogger(javaClass)
 
+    init {
+        setRetrieveUserInfo { userRequest ->
+            userRequest.clientRegistration.registrationId != "apple"
+        }
+    }
+
     @Transactional
     override fun loadUser(userRequest: OidcUserRequest): OidcUser {
         val oidcUser = super.loadUser(userRequest)
         val registrationId = userRequest.clientRegistration.registrationId
         val provider = providerFor(registrationId)
-        val providerSubject = oidcUser.name
+        val providerSubject = oidcUser.subject ?: oidcUser.name
         val email = oidcUser.getAttribute<String>("email")
+            ?: oidcUser.idToken.getClaimAsString("email")
         val user = findOrCreateUser(provider, providerSubject, email, oidcUser)
         log.info("{} OAuth2 login provisioned user {}", registrationId, user.email)
         return AppOidcUser.from(user, oidcUser)

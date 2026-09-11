@@ -4,6 +4,7 @@ import com.fancia.backend.auth.core.user.service.OidcUserInfoService
 import com.fancia.backend.auth.security.AppOidcUser
 import com.fancia.backend.auth.security.AppleClientSecretGenerator
 import com.fancia.backend.auth.security.LoginAuthenticationFailureHandler
+import com.fancia.backend.auth.security.OAuth2LoginFailureHandler
 import com.fancia.backend.auth.security.SocialOidcUserService
 import com.fancia.backend.shared.user.core.entity.User
 import com.nimbusds.jose.jwk.source.JWKSource
@@ -27,6 +28,8 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.oauth2.client.endpoint.DefaultOAuth2TokenRequestParametersConverter
+import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest
 import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver
@@ -34,6 +37,7 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -62,6 +66,7 @@ class SecurityConfiguration(
     private val oidcUserInfoService: OidcUserInfoService,
     private val oAuth2UserService: SocialOidcUserService,
     private val appleClientSecretGenerator: AppleClientSecretGenerator,
+    private val oauth2LoginFailureHandler: OAuth2LoginFailureHandler,
     private val registeredClientRepository: RegisteredClientRepository,
     private val authorizationService: OAuth2AuthorizationService,
     private val jwtSigningKeySource: JwtSigningKeySource,
@@ -162,7 +167,7 @@ class SecurityConfiguration(
                         userInfo.oidcUserService(oAuth2UserService)
                     }
                     .successHandler(oauth2AuthenticationSuccessHandler())
-                    .failureHandler(oauth2AuthenticationFailureHandler())
+                    .failureHandler(oauth2LoginFailureHandler)
             }
         }
 
@@ -198,7 +203,14 @@ class SecurityConfiguration(
                             .build()
                     "apple" ->
                         OAuth2AuthorizationRequest.from(request)
-                            .additionalParameters { params -> params["response_mode"] = "form_post" }
+                            .additionalParameters { params ->
+                                params["response_mode"] = "form_post"
+                                params.remove(PkceParameterNames.CODE_CHALLENGE)
+                                params.remove(PkceParameterNames.CODE_CHALLENGE_METHOD)
+                            }
+                            .attributes { attrs ->
+                                attrs.remove(PkceParameterNames.CODE_VERIFIER)
+                            }
                             .build()
                     else -> request
                 }
@@ -209,8 +221,9 @@ class SecurityConfiguration(
     
     private fun appleAwareAccessTokenResponseClient(): RestClientAuthorizationCodeTokenResponseClient {
         val client = RestClientAuthorizationCodeTokenResponseClient()
-        client.addParametersConverter { grantRequest ->
-            val parameters = LinkedMultiValueMap<String, String>()
+        val defaultParameters = DefaultOAuth2TokenRequestParametersConverter<OAuth2AuthorizationCodeGrantRequest>()
+        client.setParametersConverter { grantRequest ->
+            val parameters = defaultParameters.convert(grantRequest) ?: LinkedMultiValueMap()
             if (grantRequest.clientRegistration.registrationId == "apple") {
                 parameters.set(OAuth2ParameterNames.CLIENT_SECRET, appleClientSecretGenerator.generate())
             }
@@ -224,11 +237,6 @@ class SecurityConfiguration(
         return SavedRequestAwareAuthenticationSuccessHandler().apply {
             setDefaultTargetUrl("https://$domainName/")
         }
-    }
-
-    @Bean
-    fun oauth2AuthenticationFailureHandler(): AuthenticationFailureHandler {
-        return SimpleUrlAuthenticationFailureHandler("/login?oauth2Error")
     }
 
     @Bean
