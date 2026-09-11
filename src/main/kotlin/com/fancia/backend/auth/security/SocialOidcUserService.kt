@@ -121,6 +121,11 @@ class SocialOidcUserService(
                 if (user.lastName.isNullOrBlank() && !appleName.lastName.isNullOrBlank()) {
                     user.lastName = appleName.lastName
                 }
+                log.info(
+                    "Applied Apple Sign In name firstNamePresent={} lastNamePresent={}",
+                    !user.firstName.isNullOrBlank(),
+                    !user.lastName.isNullOrBlank(),
+                )
             }
         }
 
