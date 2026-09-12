@@ -344,29 +344,33 @@ class SecurityConfiguration(
                 val authorities = it.authorities.map { authority -> authority.authority }
                 context.claims.claim("authorities", authorities)
                 val user = resolveAuthenticatedUser(it, principalName)
-                user?.let { user ->
-                    context.claims.claim("email", user.email)
-                    context.claims.claim("name", "${user.firstName} ${user.lastName}")
-                    context.claims.claim("userId", user.id)
-                    context.claims.claim("isPremium", user.premiumActive)
-                }
+                putUserClaims(context, user)
             }
         }
         if (OidcParameterNames.ID_TOKEN == context.tokenType.value) {
             val authentication = context.getPrincipal<Authentication>()
             authentication.let {
                 val user = resolveAuthenticatedUser(it, principalName)
-                user?.let { user ->
-                    context.claims.claim("name", "${user.firstName} ${user.lastName}")
-                    context.claims.claim("email", user.email)
-                    context.claims.claim("userId", user.id)
-                    context.claims.claim("isPremium", user.premiumActive)
-                    user.profileImageUrl?.let {
-                        context.claims.claim("profileImageUrl", user.profileImageUrl)
-                    }
+                putUserClaims(context, user)
+                user?.profileImageUrl?.takeIf { url -> url.isNotBlank() }?.let { url ->
+                    context.claims.claim("profileImageUrl", url)
                 }
             }
         }
+    }
+
+    private fun putUserClaims(context: JwtEncodingContext, user: User?) {
+        if (user == null) return
+        user.email?.takeIf { it.isNotBlank() }?.let { context.claims.claim("email", it) }
+        val displayName = listOfNotNull(user.firstName, user.lastName)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+        if (displayName.isNotEmpty()) {
+            context.claims.claim("name", displayName)
+        }
+        user.id?.let { context.claims.claim("userId", it) }
+        context.claims.claim("isPremium", user.premiumActive)
     }
 
     @Bean
@@ -391,17 +395,25 @@ class SecurityConfiguration(
     }
 
     private fun resolveAuthenticatedUser(authentication: Authentication?, principalName: String? = null): User? {
-        when (val principal = authentication?.principal) {
-            is User -> return principal
-            is AppOidcUser -> return principal.user
-            is OAuth2User -> {
-                principal.getAttribute<String>("email")?.let { return loadUserByEmail(it) }
+        val resolved = when (val principal = authentication?.principal) {
+            is User -> principal
+            is AppOidcUser -> principal.user
+            is OidcUser -> {
+                val email = principal.email
+                    ?: principal.getAttribute<String>("email")
+                    ?: principal.idToken.getClaimAsString("email")
+                email?.let { loadUserByEmail(it) }
             }
+            is OAuth2User -> {
+                principal.getAttribute<String>("email")?.let { loadUserByEmail(it) }
+            }
+            is String -> loadUserByEmail(principal)
+            else -> null
+        } ?: principalName?.let { loadUserByEmail(it) }
 
-            is String -> return loadUserByEmail(principal)
-        }
-        principalName?.let { return loadUserByEmail(it) }
-        return null
+        if (resolved?.id != null) return resolved
+        val email = resolved?.email?.takeIf { it.isNotBlank() } ?: return resolved
+        return loadUserByEmail(email) ?: resolved
     }
 
     private fun loadUserByEmail(email: String): User? {
