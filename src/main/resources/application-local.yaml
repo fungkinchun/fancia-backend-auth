@@ -13,7 +13,7 @@ spring:
       - org.springframework.boot.data.redis.autoconfigure.RedisAutoConfiguration
       - org.springframework.boot.data.redis.autoconfigure.RedisRepositoriesAutoConfiguration
       - org.springframework.boot.session.autoconfigure.SessionAutoConfiguration
-      - org.springframework.boot.session.data.redis.autoconfigure.RedisSessionAutoConfiguration
+      - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
   security:
     oauth2:
       authorizationserver:

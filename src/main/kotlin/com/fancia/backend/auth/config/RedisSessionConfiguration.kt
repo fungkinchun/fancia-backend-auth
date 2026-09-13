@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -20,6 +19,7 @@ import org.springframework.data.redis.core.RedisOperations
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializer
+import org.slf4j.LoggerFactory
 import org.springframework.security.jackson.SecurityJacksonModules
 import org.springframework.security.oauth2.client.jackson.OAuth2ClientJacksonModule
 import org.springframework.security.oauth2.server.authorization.jackson.OAuth2AuthorizationServerJacksonModule
@@ -32,12 +32,12 @@ import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 import java.time.Duration
 
 @Configuration
-@ConditionalOnProperty(prefix = "spring.data.redis", name = ["url"])
 @ConditionalOnBean(RedisConnectionFactory::class)
 class RedisSessionConfiguration(
     @Value("\${server.servlet.session.cookie.secure:true}") private val secureCookie: Boolean,
     @Value("\${server.servlet.session.cookie.same-site:none}") private val sameSite: String,
 ) : BeanClassLoaderAware {
+    private val log = LoggerFactory.getLogger(javaClass)
     private var classLoader: ClassLoader = RedisSessionConfiguration::class.java.classLoader
 
     override fun setBeanClassLoader(classLoader: ClassLoader) {
@@ -125,6 +125,11 @@ class RedisSessionConfiguration(
         template.hashValueSerializer = serializer
         template.defaultSerializer = serializer
         template.afterPropertiesSet()
+        log.info(
+            "Auth Redis sessions using {} (hashValueSerializer={})",
+            serializer.javaClass.name,
+            template.hashValueSerializer?.javaClass?.name,
+        )
         return template
     }
 

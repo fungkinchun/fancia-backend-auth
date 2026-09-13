@@ -5,4 +5,4 @@ server:
 spring:
   autoconfigure:
     exclude:
-      - org.springframework.boot.session.data.redis.autoconfigure.RedisSessionAutoConfiguration
+      - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
