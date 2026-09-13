@@ -19,14 +19,12 @@ import org.springframework.http.MediaType
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.authentication.ProviderManager
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration
 import org.springframework.security.core.Authentication
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
@@ -39,13 +37,11 @@ import org.springframework.security.oauth2.client.web.DefaultOAuth2Authorization
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames
 import org.springframework.security.oauth2.core.endpoint.PkceParameterNames
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser
 import org.springframework.security.oauth2.core.oidc.user.OidcUser
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.security.oauth2.jwt.JwtDecoder
@@ -241,47 +237,10 @@ class SecurityConfiguration(
     }
 
     @Bean
-    fun oauth2AuthenticationSuccessHandler(): AuthenticationSuccessHandler {
-        val redirect = SavedRequestAwareAuthenticationSuccessHandler().apply {
+    fun oauth2AuthenticationSuccessHandler(): AuthenticationSuccessHandler =
+        SavedRequestAwareAuthenticationSuccessHandler().apply {
             setDefaultTargetUrl("https://$domainName/")
         }
-        return AuthenticationSuccessHandler { request, response, authentication ->
-            val serializable = toSerializableAuthentication(authentication)
-            redirect.onAuthenticationSuccess(request, response, serializable)
-        }
-    }
-
-    private fun toSerializableAuthentication(authentication: Authentication): Authentication {
-        val principal = authentication.principal
-        if (principal !is AppOidcUser) {
-            return authentication
-        }
-        val oidcUser: OidcUser =
-            if (principal.userInfo != null) {
-                DefaultOidcUser(principal.authorities, principal.idToken, principal.userInfo)
-            } else {
-                DefaultOidcUser(principal.authorities, principal.idToken)
-            }
-        val replacement =
-            if (authentication is OAuth2AuthenticationToken) {
-                OAuth2AuthenticationToken(
-                    oidcUser,
-                    oidcUser.authorities,
-                    authentication.authorizedClientRegistrationId,
-                )
-            } else {
-                UsernamePasswordAuthenticationToken.authenticated(
-                    oidcUser,
-                    null,
-                    oidcUser.authorities,
-                )
-            }
-        replacement.details = authentication.details
-        val context = SecurityContextHolder.createEmptyContext()
-        context.authentication = replacement
-        SecurityContextHolder.setContext(context)
-        return replacement
-    }
 
     @Bean
     fun jwkSource(): JWKSource<SecurityContext> = jwtSigningKeySource.createJwkSource()
