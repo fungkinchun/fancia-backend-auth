@@ -370,8 +370,9 @@ class SecurityConfiguration(
             else -> null
         } ?: principalName?.let { loadUserByEmail(it) }
 
-        if (resolved?.id != null) return resolved
-        val email = resolved?.email?.takeIf { it.isNotBlank() } ?: return resolved
+        val email = resolved?.email?.takeIf { it.isNotBlank() }
+            ?: principalName?.takeIf { it.isNotBlank() }
+            ?: return resolved
         return loadUserByEmail(email) ?: resolved
     }
 
